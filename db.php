@@ -3,7 +3,7 @@
 $host = 'localhost';
 $db   = 'vsms_db';
 $user = 'root';
-$pass = '';
+$pass = '*Rahul@098';
 
 // Establish MySQL Connection using MySQLi
 $conn = mysqli_connect($host, $user, $pass, $db);
