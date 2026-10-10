@@ -17,12 +17,15 @@ DROP TABLE IF EXISTS Branch;
 
 DROP VIEW IF EXISTS view_available_vehicles;
 DROP VIEW IF EXISTS view_sales_details;
+DROP VIEW IF EXISTS Sales_Summary;
 DROP VIEW IF EXISTS view_employee_performance;
 DROP VIEW IF EXISTS view_inventory_summary;
 
 DROP PROCEDURE IF EXISTS sp_RecordSale;
+DROP PROCEDURE IF EXISTS AddSale;
 DROP PROCEDURE IF EXISTS sp_GetMonthlySalesReport;
 DROP FUNCTION IF EXISTS fn_CalculateDiscount;
+DROP FUNCTION IF EXISTS GetTotalSalesByEmployee;
 
 -- =========================================================
 -- 2. TABLE DEFINITIONS & CONSTRAINTS
@@ -161,6 +164,22 @@ INNER JOIN Vehicle v ON s.vehicle_id = v.vehicle_id
 INNER JOIN Customer c ON s.customer_id = c.customer_id
 INNER JOIN Employee e ON s.employee_id = e.employee_id
 INNER JOIN Branch b ON e.branch_id = b.branch_id;
+
+-- View 2B: Sales_Summary (Proposal Phase 3 Item 3)
+CREATE VIEW Sales_Summary AS
+SELECT 
+    s.sale_id,
+    c.name AS customer_name,
+    v.model AS vehicle_model,
+    v.color AS vehicle_color,
+    s.sale_date,
+    s.sale_price,
+    s.payment_mode,
+    e.name AS employee_name
+FROM Sales s
+INNER JOIN Customer c ON s.customer_id = c.customer_id
+INNER JOIN Vehicle v ON s.vehicle_id = v.vehicle_id
+INNER JOIN Employee e ON s.employee_id = e.employee_id;
 
 -- View 3: Employee Performance & Total Revenue Summary
 CREATE VIEW view_employee_performance AS
@@ -324,6 +343,38 @@ BEGIN
     END IF;
 
     RETURN v_discount;
+END$$
+
+-- Stored Function: Count Sales by Employee (Proposal Phase 3 Item 5)
+CREATE FUNCTION GetTotalSalesByEmployee(p_employee_id INT)
+RETURNS INT
+DETERMINISTIC
+READS SQL DATA
+BEGIN
+    DECLARE v_count INT DEFAULT 0;
+    
+    SELECT COUNT(*) INTO v_count
+    FROM Sales
+    WHERE employee_id = p_employee_id;
+    
+    RETURN v_count;
+END$$
+
+-- Stored Procedure: AddSale (Proposal Phase 3 Item 6)
+CREATE PROCEDURE AddSale(
+    IN p_vehicle_id INT,
+    IN p_customer_id INT,
+    IN p_employee_id INT,
+    IN p_sale_price DECIMAL(10,2),
+    IN p_payment_mode VARCHAR(50)
+)
+BEGIN
+    DECLARE v_code INT;
+    DECLARE v_msg VARCHAR(255);
+    
+    CALL sp_RecordSale(p_vehicle_id, p_customer_id, p_employee_id, p_sale_price, p_payment_mode, v_code, v_msg);
+    
+    SELECT v_code AS status_code, v_msg AS status_message;
 END$$
 
 DELIMITER ;

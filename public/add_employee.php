@@ -38,44 +38,67 @@ $branches = mysqli_query($conn, "SELECT * FROM Branch ORDER BY name ASC");
 ?>
 
 <div class="page-header">
-    <div>
-        <h1>Add Showroom Employee</h1>
-        <p class="subtitle">Assign staff members to dealership branches.</p>
+    <div class="page-header-content">
+        <h1>Onboard Dealership Staff Member</h1>
+        <p class="subtitle">Assign showroom personnel, sales executives, and finance advisors to authorized dealership branches.</p>
     </div>
-    <a href="employees.php" class="btn" style="background:#64748b;">&larr; Back to Employees</a>
+    <a href="employees.php" class="btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        <span>Back to Team</span>
+    </a>
 </div>
 
 <?php if (!empty($successMsg)): ?>
-    <div class="alert alert-success"><?php echo htmlspecialchars($successMsg); ?></div>
+    <div class="alert alert-success">
+        <div class="alert-content">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                <polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+            <span><?php echo htmlspecialchars($successMsg); ?></span>
+        </div>
+        <button type="button" data-dismiss aria-label="Dismiss">&times;</button>
+    </div>
 <?php endif; ?>
 
 <?php if (!empty($errorMsg)): ?>
-    <div class="alert alert-danger"><?php echo htmlspecialchars($errorMsg); ?></div>
+    <div class="alert alert-danger">
+        <div class="alert-content">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="15" y1="9" x2="9" y2="15"/>
+                <line x1="9" y1="9" x2="15" y2="15"/>
+            </svg>
+            <span><?php echo htmlspecialchars($errorMsg); ?></span>
+        </div>
+        <button type="button" data-dismiss aria-label="Dismiss">&times;</button>
+    </div>
 <?php endif; ?>
 
 <div class="form-card">
     <form method="POST" action="add_employee.php">
         <input type="hidden" name="csrf_token" value="<?php echo e(csrf_token()); ?>">
+        
         <div class="form-group">
-            <label for="branch_id">Dealership Branch *</label>
+            <label for="branch_id">Authorized Showroom Branch (Foreign Key) *</label>
             <select id="branch_id" name="branch_id" required>
-                <option value="">-- Select Branch --</option>
+                <option value="">-- Choose Dealership Branch --</option>
                 <?php while($b = mysqli_fetch_assoc($branches)): ?>
                     <option value="<?php echo $b['branch_id']; ?>">
-                        <?php echo htmlspecialchars($b['name'] . ' (' . $b['location'] . ')'); ?>
+                        <?php echo htmlspecialchars($b['name'] . ' — ' . $b['location']); ?>
                     </option>
                 <?php endwhile; ?>
             </select>
         </div>
 
         <div class="form-group">
-            <label for="name">Employee Full Name *</label>
-            <input type="text" id="name" name="name" placeholder="e.g. Vikram Joshi" required>
+            <label for="name">Staff Member Full Name *</label>
+            <input type="text" id="name" name="name" placeholder="e.g. Kavya Reddy, Arjun Mehta" required>
         </div>
 
         <div class="form-grid">
             <div class="form-group">
-                <label for="role">Designation / Role *</label>
+                <label for="role">Designation / Organizational Role *</label>
                 <select id="role" name="role">
                     <option value="Sales Executive">Sales Executive</option>
                     <option value="Senior Sales Executive">Senior Sales Executive</option>
@@ -86,29 +109,32 @@ $branches = mysqli_query($conn, "SELECT * FROM Branch ORDER BY name ASC");
             </div>
 
             <div class="form-group">
-                <label for="salary">Monthly Salary (₹) *</label>
-                <input type="number" id="salary" name="salary" step="500" min="1000" placeholder="e.g. 45000" required>
+                <label for="salary">Monthly Base Salary (₹ &gt; 0) *</label>
+                <input type="number" id="salary" name="salary" step="500" min="1000" placeholder="e.g. 52000" required>
             </div>
         </div>
 
         <div class="form-grid">
             <div class="form-group">
-                <label for="phone">Phone Number *</label>
-                <input type="tel" id="phone" name="phone" placeholder="e.g. 9811223344" required>
+                <label for="phone">Contact Mobile Number *</label>
+                <input type="tel" id="phone" name="phone" placeholder="e.g. 9850011223" required>
             </div>
 
             <div class="form-group">
-                <label for="email">Work Email</label>
-                <input type="email" id="email" name="email" placeholder="e.g. vikram@vsms.com">
+                <label for="email">Dealership Email (Unique)</label>
+                <input type="email" id="email" name="email" placeholder="e.g. staff@vsms.com">
             </div>
         </div>
 
         <div class="form-group">
-            <label for="hire_date">Date of Joining</label>
+            <label for="hire_date">Date of Joining / Employment</label>
             <input type="date" id="hire_date" name="hire_date" value="<?php echo date('Y-m-d'); ?>" required>
         </div>
 
-        <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center;">+ Add Employee Record</button>
+        <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center; padding:12px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span>Onboard Staff Member</span>
+        </button>
     </form>
 </div>
 

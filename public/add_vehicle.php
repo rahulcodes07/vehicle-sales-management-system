@@ -33,70 +33,96 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 ?>
 
 <div class="page-header">
-    <div>
-        <h1>Add New Vehicle</h1>
-        <p class="subtitle">Enter specifications to register new inventory stock.</p>
+    <div class="page-header-content">
+        <h1>Onboard New Vehicle to Fleet</h1>
+        <p class="subtitle">Enter specifications, powertrain category, and showroom price to register inventory stock.</p>
     </div>
-    <a href="vehicles.php" class="btn" style="background:#64748b;">&larr; Back to Vehicles</a>
+    <a href="vehicles.php" class="btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        <span>Back to Inventory</span>
+    </a>
 </div>
 
 <?php if (!empty($successMsg)): ?>
-    <div class="alert alert-success"><?php echo htmlspecialchars($successMsg); ?></div>
+    <div class="alert alert-success">
+        <div class="alert-content">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                <polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+            <span><?php echo htmlspecialchars($successMsg); ?></span>
+        </div>
+        <button type="button" data-dismiss aria-label="Dismiss">&times;</button>
+    </div>
 <?php endif; ?>
 
 <?php if (!empty($errorMsg)): ?>
-    <div class="alert alert-danger"><?php echo htmlspecialchars($errorMsg); ?></div>
+    <div class="alert alert-danger">
+        <div class="alert-content">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="15" y1="9" x2="9" y2="15"/>
+                <line x1="9" y1="9" x2="15" y2="15"/>
+            </svg>
+            <span><?php echo htmlspecialchars($errorMsg); ?></span>
+        </div>
+        <button type="button" data-dismiss aria-label="Dismiss">&times;</button>
+    </div>
 <?php endif; ?>
 
 <div class="form-card">
     <form method="POST" action="add_vehicle.php">
         <input type="hidden" name="csrf_token" value="<?php echo e(csrf_token()); ?>">
+        
         <div class="form-group">
-            <label for="model">Vehicle Model / Name *</label>
-            <input type="text" id="model" name="model" placeholder="e.g. Honda City ZX, Hyundai Creta" required>
+            <label for="model">Vehicle Model & Trim *</label>
+            <input type="text" id="model" name="model" placeholder="e.g. Tata Harrier Fearless Plus, Mahindra XUV700" required>
         </div>
 
         <div class="form-grid">
             <div class="form-group">
-                <label for="manufacturing_yr">Manufacturing Year *</label>
+                <label for="manufacturing_yr">Manufacturing Model Year *</label>
                 <input type="number" id="manufacturing_yr" name="manufacturing_yr" min="1990" max="<?php echo date('Y') + 1; ?>" value="<?php echo date('Y'); ?>" required>
             </div>
 
             <div class="form-group">
-                <label for="price">Base Showroom Price (₹) *</label>
-                <input type="number" id="price" name="price" step="0.01" min="1" placeholder="e.g. 1500000" required>
+                <label for="price">Ex-Showroom Base Price (₹) *</label>
+                <input type="number" id="price" name="price" step="0.01" min="1" placeholder="e.g. 1850000" required>
             </div>
         </div>
 
         <div class="form-grid">
             <div class="form-group">
-                <label for="type">Vehicle Type</label>
+                <label for="type">Vehicle Category</label>
                 <select id="type" name="type">
-                    <option value="Car">Car</option>
-                    <option value="Bike">Bike</option>
-                    <option value="SUV">SUV</option>
-                    <option value="Truck">Truck</option>
+                    <option value="Car">Passenger Car</option>
+                    <option value="Bike">Motorcycle / Bike</option>
+                    <option value="SUV">SUV / Crossover</option>
+                    <option value="Truck">Commercial Truck</option>
                 </select>
             </div>
 
             <div class="form-group">
-                <label for="fuel_type">Fuel Type</label>
+                <label for="fuel_type">Powertrain / Fuel Variant</label>
                 <select id="fuel_type" name="fuel_type">
                     <option value="Petrol">Petrol</option>
                     <option value="Diesel">Diesel</option>
-                    <option value="Electric">Electric</option>
+                    <option value="Electric">Electric (EV)</option>
                     <option value="CNG">CNG</option>
-                    <option value="Hybrid">Hybrid</option>
+                    <option value="Hybrid">Strong Hybrid</option>
                 </select>
             </div>
         </div>
 
         <div class="form-group">
-            <label for="color">Body Color *</label>
-            <input type="text" id="color" name="color" placeholder="e.g. Pearl White, Jet Black" required>
+            <label for="color">Exterior Body Paint / Color *</label>
+            <input type="text" id="color" name="color" placeholder="e.g. Daytona Grey, Napoli Black" required>
         </div>
 
-        <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center;">+ Save Vehicle to Stock</button>
+        <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center; padding:12px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span>Save Vehicle to Stock</span>
+        </button>
     </form>
 </div>
 

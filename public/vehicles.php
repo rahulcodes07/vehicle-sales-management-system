@@ -2,7 +2,7 @@
 $pageTitle = "Vehicle Inventory";
 require_once __DIR__ . '/../app/Views/layouts/header.php';
 
-// Handle filter if provided
+// Handle filter if provided (Preserved exact PHP logic)
 $filterType = $_GET['type'] ?? 'All';
 $filterStatus = $_GET['status'] ?? 'All';
 
@@ -34,11 +34,17 @@ $result = mysqli_stmt_get_result($stmt);
 ?>
 
 <div class="page-header">
-    <div>
-        <h1>Vehicle Inventory Management</h1>
-        <p class="subtitle">Real-time stock of cars, bikes, SUVs, and commercial vehicles.</p>
+    <div class="page-header-content">
+        <h1>Vehicle Fleet & Inventory</h1>
+        <p class="subtitle">Complete catalog of showroom inventory, fuel variants, manufacturing specifications, and availability states.</p>
     </div>
-    <a href="add_vehicle.php" class="btn btn-primary">+ Add New Vehicle</a>
+    <a href="add_vehicle.php" class="btn btn-primary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        <span>Add New Vehicle</span>
+    </a>
 </div>
 
 <?php if (isset($_GET['msg'])): ?>
@@ -48,27 +54,39 @@ $result = mysqli_stmt_get_result($stmt);
     <div class="alert alert-danger"><?php echo htmlspecialchars($_GET['err']); ?></div>
 <?php endif; ?>
 
-<!-- Filter Bar -->
-<div style="background:white; padding:15px 20px; border-radius:10px; margin-bottom:20px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
-    <form method="GET" style="display:flex; gap:15px; align-items:center; flex-wrap:wrap;">
-        <label style="margin-bottom:0;">Filter by Type:</label>
-        <select name="type" style="width:auto; margin-bottom:0;">
-            <option value="All" <?php echo $filterType == 'All' ? 'selected' : ''; ?>>All Types</option>
-            <option value="Car" <?php echo $filterType == 'Car' ? 'selected' : ''; ?>>Car</option>
-            <option value="Bike" <?php echo $filterType == 'Bike' ? 'selected' : ''; ?>>Bike</option>
-            <option value="SUV" <?php echo $filterType == 'SUV' ? 'selected' : ''; ?>>SUV</option>
-            <option value="Truck" <?php echo $filterType == 'Truck' ? 'selected' : ''; ?>>Truck</option>
-        </select>
+<!-- Filter & Search Toolbar -->
+<div class="filter-card">
+    <form method="GET" style="display:flex; gap:16px; align-items:center; flex-wrap:wrap;">
+        <div style="display:flex; align-items:center; gap:8px;">
+            <label style="margin-bottom:0; color:var(--text-secondary);">Vehicle Category:</label>
+            <select name="type" style="width:auto; min-width:140px;">
+                <option value="All" <?php echo $filterType == 'All' ? 'selected' : ''; ?>>All Categories</option>
+                <option value="Car" <?php echo $filterType == 'Car' ? 'selected' : ''; ?>>Passenger Car</option>
+                <option value="Bike" <?php echo $filterType == 'Bike' ? 'selected' : ''; ?>>Motorcycle / Bike</option>
+                <option value="SUV" <?php echo $filterType == 'SUV' ? 'selected' : ''; ?>>SUV / Crossover</option>
+                <option value="Truck" <?php echo $filterType == 'Truck' ? 'selected' : ''; ?>>Commercial Truck</option>
+            </select>
+        </div>
 
-        <label style="margin-bottom:0;">Status:</label>
-        <select name="status" style="width:auto; margin-bottom:0;">
-            <option value="All" <?php echo $filterStatus == 'All' ? 'selected' : ''; ?>>All Statuses</option>
-            <option value="Available" <?php echo $filterStatus == 'Available' ? 'selected' : ''; ?>>Available</option>
-            <option value="Sold" <?php echo $filterStatus == 'Sold' ? 'selected' : ''; ?>>Sold</option>
-        </select>
+        <div style="display:flex; align-items:center; gap:8px;">
+            <label style="margin-bottom:0; color:var(--text-secondary);">Stock Status:</label>
+            <select name="status" style="width:auto; min-width:140px;">
+                <option value="All" <?php echo $filterStatus == 'All' ? 'selected' : ''; ?>>All Statuses</option>
+                <option value="Available" <?php echo $filterStatus == 'Available' ? 'selected' : ''; ?>>Available Only</option>
+                <option value="Sold" <?php echo $filterStatus == 'Sold' ? 'selected' : ''; ?>>Sold Units</option>
+            </select>
+        </div>
 
-        <button type="submit" class="btn btn-sm">Apply Filter</button>
-        <a href="vehicles.php" class="btn btn-sm" style="background:#64748b;">Reset</a>
+        <div style="display:flex; gap:8px; margin-left:auto;">
+            <button type="submit" class="btn btn-sm btn-primary">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+                <span>Filter Fleet</span>
+            </button>
+            <a href="vehicles.php" class="btn btn-sm">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
+                <span>Reset</span>
+            </a>
+        </div>
     </form>
 </div>
 
@@ -76,48 +94,76 @@ $result = mysqli_stmt_get_result($stmt);
     <table>
         <thead>
             <tr>
-                <th>ID</th>
-                <th>Model</th>
+                <th>Vehicle Code</th>
+                <th>Model Specifications</th>
                 <th>Year</th>
-                <th>Type</th>
-                <th>Fuel</th>
-                <th>Color</th>
-                <th>Base Price</th>
-                <th>Status</th>
-                <th>Actions</th>
+                <th>Category</th>
+                <th>Powertrain</th>
+                <th>Finish / Color</th>
+                <th>Base Ex-Showroom</th>
+                <th>Availability</th>
+                <th style="text-align:right;">Actions</th>
             </tr>
         </thead>
         <tbody>
             <?php if(mysqli_num_rows($result) > 0): ?>
-                <?php while($row = mysqli_fetch_assoc($result)): ?>
+                <?php while($row = mysqli_fetch_assoc($result)): 
+                    $isAvail = ($row['status'] === 'Available');
+                ?>
                     <tr>
-                        <td><strong>#<?php echo $row['vehicle_id']; ?></strong></td>
-                        <td><strong><?php echo htmlspecialchars($row['model']); ?></strong></td>
-                        <td><?php echo htmlspecialchars($row['manufacturing_yr']); ?></td>
-                        <td><span class="badge badge-info"><?php echo htmlspecialchars($row['type']); ?></span></td>
-                        <td><?php echo htmlspecialchars($row['fuel_type']); ?></td>
-                        <td><?php echo htmlspecialchars($row['color']); ?></td>
-                        <td>₹<?php echo number_format($row['price'], 2); ?></td>
                         <td>
-                            <span class="badge <?php echo $row['status'] == 'Available' ? 'status-available' : 'status-sold'; ?>">
+                            <span class="code-id">VH-<?php echo sprintf('%03d', (int)$row['vehicle_id']); ?></span>
+                        </td>
+                        <td>
+                            <strong><?php echo htmlspecialchars($row['model']); ?></strong>
+                        </td>
+                        <td><?php echo htmlspecialchars($row['manufacturing_yr']); ?></td>
+                        <td>
+                            <span class="badge badge-info"><?php echo htmlspecialchars($row['type']); ?></span>
+                        </td>
+                        <td>
+                            <span class="badge badge-cyan"><?php echo htmlspecialchars($row['fuel_type']); ?></span>
+                        </td>
+                        <td><?php echo htmlspecialchars($row['color']); ?></td>
+                        <td>
+                            <strong class="inr-price">₹<?php echo number_format((float)$row['price'], 2); ?></strong>
+                        </td>
+                        <td>
+                            <span class="badge <?php echo $isAvail ? 'status-available' : 'status-sold'; ?>">
                                 <?php echo htmlspecialchars($row['status']); ?>
                             </span>
                         </td>
-                        <td>
-                            <?php if ($row['status'] == 'Available'): ?>
-                                <a href="add_sale.php?vehicle_id=<?php echo $row['vehicle_id']; ?>" class="btn btn-sm btn-primary">Sell</a>
+                        <td style="text-align:right; white-space:nowrap;">
+                            <?php if ($isAvail): ?>
+                                <a href="add_sale.php?vehicle_id=<?php echo $row['vehicle_id']; ?>" class="btn btn-sm btn-primary">
+                                    <span>Sell</span>
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                                </a>
                             <?php endif; ?>
                             <form method="POST" action="delete_vehicle.php" style="display:inline;">
                                 <input type="hidden" name="csrf_token" value="<?php echo e(csrf_token()); ?>">
                                 <input type="hidden" name="id" value="<?php echo (int) $row['vehicle_id']; ?>">
-                                <button type="submit" class="btn btn-sm btn-danger" data-confirm="Are you sure you want to delete this vehicle record?">Delete</button>
+                                <button type="submit" class="btn btn-sm btn-danger" data-confirm="Are you sure you want to remove this vehicle from inventory? Referential integrity will prevent deletion if sales exist.">
+                                    Delete
+                                </button>
                             </form>
                         </td>
                     </tr>
                 <?php endwhile; ?>
             <?php else: ?>
                 <tr>
-                    <td colspan="9" style="text-align:center; padding:20px; color:#64748b;">No vehicles found matching criteria.</td>
+                    <td colspan="9">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="8" y1="12" x2="16" y2="12"></line>
+                                </svg>
+                            </div>
+                            <h3>No vehicles found</h3>
+                            <p>No vehicles match your active filter criteria. Try resetting filters or adding new vehicles.</p>
+                        </div>
+                    </td>
                 </tr>
             <?php endif; ?>
         </tbody>

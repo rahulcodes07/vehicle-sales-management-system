@@ -64,3 +64,57 @@ WHERE NOT EXISTS (SELECT 1 FROM Vehicle WHERE model = 'Tata Punch EV Empowered' 
 INSERT INTO Vehicle (model, manufacturing_yr, type, fuel_type, color, price, status)
 SELECT 'Maruti Suzuki Grand Vitara', 2023, 'SUV', 'Hybrid', 'Chestnut Brown', 1920000.00, 'Available'
 WHERE NOT EXISTS (SELECT 1 FROM Vehicle WHERE model = 'Maruti Suzuki Grand Vitara' AND color = 'Chestnut Brown');
+
+-- Additional Vehicles for Rich Catalog
+INSERT INTO Vehicle (model, manufacturing_yr, type, fuel_type, color, price, status)
+SELECT 'Tata Harrier Fearless Plus', 2024, 'SUV', 'Diesel', 'Sunlit Yellow', 2550000.00, 'Available'
+WHERE NOT EXISTS (SELECT 1 FROM Vehicle WHERE model = 'Tata Harrier Fearless Plus');
+
+INSERT INTO Vehicle (model, manufacturing_yr, type, fuel_type, color, price, status)
+SELECT 'Mahindra Thar LX 4x4', 2023, 'SUV', 'Diesel', 'Napoli Black', 1650000.00, 'Available'
+WHERE NOT EXISTS (SELECT 1 FROM Vehicle WHERE model = 'Mahindra Thar LX 4x4');
+
+INSERT INTO Vehicle (model, manufacturing_yr, type, fuel_type, color, price, status)
+SELECT 'Royal Enfield Himalayan 450', 2024, 'Bike', 'Petrol', 'Hanle Black', 320000.00, 'Available'
+WHERE NOT EXISTS (SELECT 1 FROM Vehicle WHERE model = 'Royal Enfield Himalayan 450');
+
+-- -------------------------------------------------------------
+-- Additional Sales Records (Creates Repeat Buyers & Varied Revenue)
+-- Customer 1 (Rohan Kapoor) buys vehicle 2 (Hyundai Creta) -> Repeat Buyer!
+-- Customer 2 (Ananya Gupta) buys vehicle 3 (Tata Nexon EV)
+-- Customer 3 (Vikram Malhotra) buys vehicle 5 (Toyota Fortuner)
+-- -------------------------------------------------------------
+INSERT INTO Sales (vehicle_id, customer_id, employee_id, sale_date, sale_price, payment_mode)
+SELECT 2, 1, 1, '2024-03-10', 1800000.00, 'Card'
+WHERE NOT EXISTS (SELECT 1 FROM Sales WHERE vehicle_id = 2);
+UPDATE Vehicle SET status = 'Sold' WHERE vehicle_id = 2;
+
+INSERT INTO Sales (vehicle_id, customer_id, employee_id, sale_date, sale_price, payment_mode)
+SELECT 3, 2, 2, '2024-04-18', 1650000.00, 'UPI'
+WHERE NOT EXISTS (SELECT 1 FROM Sales WHERE vehicle_id = 3);
+UPDATE Vehicle SET status = 'Sold' WHERE vehicle_id = 3;
+
+INSERT INTO Sales (vehicle_id, customer_id, employee_id, sale_date, sale_price, payment_mode)
+SELECT 5, 3, 3, '2024-05-22', 3750000.00, 'Net Banking'
+WHERE NOT EXISTS (SELECT 1 FROM Sales WHERE vehicle_id = 5);
+UPDATE Vehicle SET status = 'Sold' WHERE vehicle_id = 5;
+
+-- Another purchase by Customer 2 (Ananya Gupta) -> Repeat Buyer!
+INSERT INTO Sales (vehicle_id, customer_id, employee_id, sale_date, sale_price, payment_mode)
+SELECT 4, 2, 1, '2024-06-15', 170000.00, 'Cash'
+WHERE NOT EXISTS (SELECT 1 FROM Sales WHERE vehicle_id = 4);
+UPDATE Vehicle SET status = 'Sold' WHERE vehicle_id = 4;
+
+-- Additional Insurance Policies
+INSERT INTO Insurance (vehicle_id, customer_id, provider, policy_no, start_date, end_date, premium)
+SELECT 2, 1, 'ICICI Lombard General Insurance', 'POL-ICICI-2024-4412', '2024-03-10', '2025-03-09', 38000.00
+WHERE NOT EXISTS (SELECT 1 FROM Insurance WHERE policy_no = 'POL-ICICI-2024-4412');
+
+INSERT INTO Insurance (vehicle_id, customer_id, provider, policy_no, start_date, end_date, premium)
+SELECT 3, 2, 'Tata AIG General Insurance', 'POL-TATA-2024-7729', '2024-04-18', '2025-04-17', 35000.00
+WHERE NOT EXISTS (SELECT 1 FROM Insurance WHERE policy_no = 'POL-TATA-2024-7729');
+
+INSERT INTO Insurance (vehicle_id, customer_id, provider, policy_no, start_date, end_date, premium)
+SELECT 5, 3, 'Bajaj Allianz General Insurance', 'POL-BAJAJ-2024-9911', '2024-05-22', '2025-05-21', 72000.00
+WHERE NOT EXISTS (SELECT 1 FROM Insurance WHERE policy_no = 'POL-BAJAJ-2024-9911');
+
