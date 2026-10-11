@@ -15,7 +15,7 @@ CREATE PROCEDURE sp_RecordSale(
 )
 proc_label: BEGIN
     DECLARE v_vehicle_status VARCHAR(20) DEFAULT NULL;
-    DECLARE v_vehicle_exists INT DEFAULT 0;
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET v_vehicle_status = NULL;
 
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
     BEGIN
@@ -26,13 +26,13 @@ proc_label: BEGIN
 
     START TRANSACTION;
 
-    SELECT COUNT(*), MAX(status)
-      INTO v_vehicle_exists, v_vehicle_status
+    SELECT status
+      INTO v_vehicle_status
       FROM Vehicle
      WHERE vehicle_id = p_vehicle_id
      FOR UPDATE;
 
-    IF v_vehicle_exists = 0 THEN
+    IF v_vehicle_status IS NULL THEN
         ROLLBACK;
         SET p_status_code = 404;
         SET p_status_message = 'Vehicle does not exist.';

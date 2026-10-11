@@ -12,13 +12,23 @@ transaction processing, reporting views, stored functions, and audit triggers.
 3. Run `database/seed_demo.sql` for additional Indian dealership records.
 4. If the database already exists, run
    `database/patches/001_concurrency_safe_sale.sql`.
-5. Serve the repository through Apache/XAMPP or run:
+5. Install the Phase 3 proposal objects:
+
+   ```text
+   mysql -u root -p vsms_db < database/patches/002_phase3_proposal_objects.sql
+   ```
+
+6. Verify the Phase 3 objects with
+   `database/patches/003_phase3_verification.sql`.
+7. Apply `database/patches/004_function_metadata.sql` for the corrected
+   date-dependent discount function metadata.
+8. Serve the repository through Apache/XAMPP or run:
 
    ```text
    php -S localhost:8000 -t public
    ```
 
-6. Open `http://localhost:8000/index.php`.
+9. Open `http://localhost:8000/index.php`.
 
 ## Application structure
 

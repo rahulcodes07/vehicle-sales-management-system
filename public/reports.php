@@ -17,7 +17,11 @@ while(mysqli_more_results($conn) && mysqli_next_result($conn)) {
 }
 
 // 2. Query Database View: view_employee_performance (Proposal Phase 3 Item 1 & 3)
-$empPerformance = mysqli_query($conn, "SELECT * FROM view_employee_performance ORDER BY total_revenue_generated DESC");
+$empPerformance = mysqli_query($conn, "
+    SELECT p.*, GetTotalSalesByEmployee(p.employee_id) AS function_sales_count
+    FROM view_employee_performance p
+    ORDER BY p.total_revenue_generated DESC
+");
 
 // 3. Query Database View: view_inventory_summary (Proposal Phase 3 Item 3)
 $invSummary = mysqli_query($conn, "SELECT * FROM view_inventory_summary");
@@ -245,9 +249,9 @@ $explainResult = mysqli_query($conn, $explainQuery);
 <!-- =========================================================================
      PROPOSAL DELIVERABLE 4: DATABASE VIEWS & STORED FUNCTIONS
      ========================================================================= -->
-<h2>4. Database View: <code>view_employee_performance</code></h2>
+<h2>4. Database View + Stored Function: <code>view_employee_performance</code> &amp; <code>GetTotalSalesByEmployee()</code></h2>
 <div class="concept-box">
-    <strong>💡 Why Database Views?</strong> A View is a stored virtual query. It aggregates performance data across <code>Employee</code>, <code>Branch</code>, and <code>Sales</code> without exposing underlying schema details or writing complex <code>GROUP BY</code> queries in PHP.
+    <strong>💡 Why Database Views and Functions?</strong> The view aggregates performance data across <code>Employee</code>, <code>Branch</code>, and <code>Sales</code>. The adjacent function column independently executes <code>GetTotalSalesByEmployee(employee_id)</code>, allowing the proposal deliverables to be compared against one another.
 </div>
 
 <div class="table-responsive">
@@ -257,7 +261,8 @@ $explainResult = mysqli_query($conn, $explainQuery);
                 <th>Sales Consultant</th>
                 <th>Designation</th>
                 <th>Showroom Branch</th>
-                <th>Units Sold</th>
+                <th>Units Sold (View)</th>
+                <th>Units Sold (Function)</th>
                 <th>Total Revenue Generated</th>
             </tr>
         </thead>
@@ -269,11 +274,12 @@ $explainResult = mysqli_query($conn, $explainQuery);
                         <td><?php echo htmlspecialchars($ep['role']); ?></td>
                         <td><?php echo htmlspecialchars($ep['branch_name']); ?></td>
                         <td><span class="badge badge-success"><?php echo $ep['total_vehicles_sold']; ?> units</span></td>
+                        <td><span class="badge badge-info"><?php echo $ep['function_sales_count']; ?> units</span></td>
                         <td><strong class="inr-price">₹<?php echo number_format((float)$ep['total_revenue_generated'], 2); ?></strong></td>
                     </tr>
                 <?php endwhile; ?>
             <?php else: ?>
-                <tr><td colspan="5" style="text-align:center; padding:20px;">No employee data.</td></tr>
+                <tr><td colspan="6" style="text-align:center; padding:20px;">No employee data.</td></tr>
             <?php endif; ?>
         </tbody>
     </table>

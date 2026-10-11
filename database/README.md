@@ -9,6 +9,14 @@ reporting, and audit history.
 2. Run `database/seed_demo.sql` to add the extended Indian dealership dataset.
 3. Run `database/patches/001_concurrency_safe_sale.sql` on an existing database
    to update the sale procedure without resetting data.
+4. Run `database/patches/002_phase3_proposal_objects.sql` to install the
+   proposal-facing `Sales_Summary`, `GetTotalSalesByEmployee()`, and `AddSale`
+   objects.
+5. Run `database/patches/003_phase3_verification.sql` to verify the live
+   database objects and query plan.
+6. Apply `database/patches/004_function_metadata.sql` when upgrading an
+   existing database so the date-dependent discount function has correct
+   MySQL routine metadata.
 
 The `install.sql` file is a complete clean-install script for XAMPP and
 academic demonstrations. The supporting files make upgrades and demo data

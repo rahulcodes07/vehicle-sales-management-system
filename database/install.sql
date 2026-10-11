@@ -7,14 +7,6 @@ CREATE DATABASE IF NOT EXISTS vsms_db;
 USE vsms_db;
 
 -- 1. DROP EXISTING OBJECTS (FOR CLEAN RESET)
-DROP TABLE IF EXISTS Insurance;
-DROP TABLE IF EXISTS Sales_Audit_Log;
-DROP TABLE IF EXISTS Sales;
-DROP TABLE IF EXISTS Vehicle;
-DROP TABLE IF EXISTS Employee;
-DROP TABLE IF EXISTS Customer;
-DROP TABLE IF EXISTS Branch;
-
 DROP VIEW IF EXISTS view_available_vehicles;
 DROP VIEW IF EXISTS view_sales_details;
 DROP VIEW IF EXISTS Sales_Summary;
@@ -26,6 +18,14 @@ DROP PROCEDURE IF EXISTS AddSale;
 DROP PROCEDURE IF EXISTS sp_GetMonthlySalesReport;
 DROP FUNCTION IF EXISTS fn_CalculateDiscount;
 DROP FUNCTION IF EXISTS GetTotalSalesByEmployee;
+
+DROP TABLE IF EXISTS Insurance;
+DROP TABLE IF EXISTS Sales_Audit_Log;
+DROP TABLE IF EXISTS Sales;
+DROP TABLE IF EXISTS Vehicle;
+DROP TABLE IF EXISTS Employee;
+DROP TABLE IF EXISTS Customer;
+DROP TABLE IF EXISTS Branch;
 
 -- =========================================================
 -- 2. TABLE DEFINITIONS & CONSTRAINTS
@@ -175,11 +175,13 @@ SELECT
     s.sale_date,
     s.sale_price,
     s.payment_mode,
-    e.name AS employee_name
+    e.name AS employee_name,
+    b.location AS branch_location
 FROM Sales s
 INNER JOIN Customer c ON s.customer_id = c.customer_id
 INNER JOIN Vehicle v ON s.vehicle_id = v.vehicle_id
-INNER JOIN Employee e ON s.employee_id = e.employee_id;
+INNER JOIN Employee e ON s.employee_id = e.employee_id
+INNER JOIN Branch b ON e.branch_id = b.branch_id;
 
 -- View 3: Employee Performance & Total Revenue Summary
 CREATE VIEW view_employee_performance AS
@@ -268,7 +270,7 @@ CREATE PROCEDURE sp_RecordSale(
 )
 proc_label: BEGIN
     DECLARE v_vehicle_status VARCHAR(20) DEFAULT NULL;
-    DECLARE v_vehicle_exists INT DEFAULT 0;
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET v_vehicle_status = NULL;
 
     -- Error handler for unexpected SQL exceptions (Rollback)
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
@@ -282,13 +284,13 @@ proc_label: BEGIN
     START TRANSACTION;
 
     -- FOR UPDATE prevents two concurrent users from selling the same vehicle.
-    SELECT COUNT(*), MAX(status)
-      INTO v_vehicle_exists, v_vehicle_status
+    SELECT status
+      INTO v_vehicle_status
       FROM Vehicle
      WHERE vehicle_id = p_vehicle_id
      FOR UPDATE;
 
-    IF v_vehicle_exists = 0 THEN
+    IF v_vehicle_status IS NULL THEN
         ROLLBACK;
         SET p_status_code = 404;
         SET p_status_message = 'Vehicle does not exist.';
@@ -328,7 +330,8 @@ END$$
 -- Stored Function: Calculates eligible festive discount based on manufacturing year
 CREATE FUNCTION fn_CalculateDiscount(p_sale_price DECIMAL(10,2), p_vehicle_year INT)
 RETURNS DECIMAL(10,2)
-DETERMINISTIC
+NOT DETERMINISTIC
+NO SQL
 BEGIN
     DECLARE v_discount DECIMAL(10,2);
     DECLARE v_age INT;

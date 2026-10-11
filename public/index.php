@@ -203,7 +203,7 @@ $top_rep = mysqli_fetch_assoc(mysqli_query($conn, "SELECT * FROM view_employee_p
         </thead>
         <tbody>
             <?php
-            $recent_sales = mysqli_query($conn, "SELECT * FROM view_sales_details ORDER BY sale_id DESC LIMIT 5");
+            $recent_sales = mysqli_query($conn, "SELECT * FROM Sales_Summary ORDER BY sale_id DESC LIMIT 5");
             if (mysqli_num_rows($recent_sales) > 0):
                 while($row = mysqli_fetch_assoc($recent_sales)):
                     $payMode = htmlspecialchars($row['payment_mode']);

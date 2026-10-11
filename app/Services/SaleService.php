@@ -8,7 +8,7 @@ final class SaleService
     }
 
     /**
-     * The stored procedure is intentionally the only sale write path.
+     * AddSale is the proposal-facing stored procedure and the only sale write path.
      * Vehicle locking, the transaction, status change, and audit trigger all
      * belong to the database layer.
      *
@@ -21,31 +21,31 @@ final class SaleService
         float $salePrice,
         string $paymentMode
     ): array {
-        $statement = mysqli_prepare(
-            $this->connection,
-            'CALL sp_RecordSale(?, ?, ?, ?, ?, @status_code, @status_msg)'
-        );
-        mysqli_stmt_bind_param(
-            $statement,
-            'iiids',
+        $safePaymentMode = mysqli_real_escape_string($this->connection, $paymentMode);
+        $query = sprintf(
+            "CALL AddSale(%d, %d, %d, %.2f, '%s')",
             $vehicleId,
             $customerId,
             $employeeId,
             $salePrice,
-            $paymentMode
+            $safePaymentMode
         );
-        mysqli_stmt_execute($statement);
-        mysqli_stmt_close($statement);
+        $result = mysqli_query($this->connection, $query);
+        $row = $result instanceof mysqli_result ? (mysqli_fetch_assoc($result) ?: []) : [];
+        if ($result instanceof mysqli_result) {
+            mysqli_free_result($result);
+        }
 
-        $result = mysqli_query(
-            $this->connection,
-            'SELECT @status_code AS status_code, @status_msg AS status_msg'
-        );
-        $row = mysqli_fetch_assoc($result) ?: [];
+        while (mysqli_more_results($this->connection)) {
+            $extraResult = mysqli_next_result($this->connection);
+            if ($extraResult instanceof mysqli_result) {
+                mysqli_free_result($extraResult);
+            }
+        }
 
         return [
             'status_code' => (int) ($row['status_code'] ?? 500),
-            'status_msg' => (string) ($row['status_msg'] ?? 'The database returned no transaction status.'),
+            'status_msg' => (string) ($row['status_message'] ?? 'The database returned no transaction status.'),
         ];
     }
 }

@@ -17,11 +17,13 @@ SELECT
     s.sale_date,
     s.sale_price,
     s.payment_mode,
-    e.name AS employee_name
+    e.name AS employee_name,
+    b.location AS branch_location
 FROM Sales s
 INNER JOIN Customer c ON s.customer_id = c.customer_id
 INNER JOIN Vehicle v ON s.vehicle_id = v.vehicle_id
-INNER JOIN Employee e ON s.employee_id = e.employee_id;
+INNER JOIN Employee e ON s.employee_id = e.employee_id
+INNER JOIN Branch b ON e.branch_id = b.branch_id;
 
 -- 2. Stored Function: GetTotalSalesByEmployee (Proposal Phase 3 Item 5)
 DROP FUNCTION IF EXISTS GetTotalSalesByEmployee;
@@ -30,7 +32,6 @@ DELIMITER $$
 
 CREATE FUNCTION GetTotalSalesByEmployee(p_employee_id INT)
 RETURNS INT
-DETERMINISTIC
 READS SQL DATA
 BEGIN
     DECLARE v_count INT DEFAULT 0;
