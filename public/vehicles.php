@@ -126,7 +126,7 @@ $result = mysqli_stmt_get_result($stmt);
                         </td>
                         <td><?php echo htmlspecialchars($row['color']); ?></td>
                         <td>
-                            <strong class="inr-price">₹<?php echo number_format((float)$row['price'], 2); ?></strong>
+                            <strong class="inr-price"><?php echo money((float)$row['price']); ?></strong>
                         </td>
                         <td>
                             <span class="badge <?php echo $isAvail ? 'status-available' : 'status-sold'; ?>">

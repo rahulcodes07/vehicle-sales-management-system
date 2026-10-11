@@ -14,9 +14,6 @@ $result = mysqli_query($conn, $query);
     </div>
 </div>
 
-<div class="concept-box">
-    <strong>💡 How Triggers Work in ADBMS (Proposal Phase 4):</strong> These log records are <em>never</em> written by application PHP code. Instead, MySQL Triggers intercept the <code>AFTER INSERT</code> and <code>AFTER DELETE</code> events on the <code>Sales</code> table, update inventory availability, and autonomously insert an audit snapshot here. This guarantees tamper-proof auditability even if records are modified outside the web application.
-</div>
 
 <div class="table-responsive">
     <table>

@@ -88,10 +88,6 @@ $employees = mysqli_query($conn, "SELECT e.*, b.name as branch_name FROM Employe
     </div>
 <?php endif; ?>
 
-<div class="concept-box">
-    <strong>💡 ADBMS Transaction Safety (Proposal Phase 3):</strong> Submitting this form calls the proposal-facing MySQL procedure <code>AddSale</code>, which delegates to the transactional procedure <code>sp_RecordSale</code>. MySQL starts a transaction and locks the selected vehicle row with <code>SELECT ... FOR UPDATE</code>. If any failure occurs, an automatic <code>ROLLBACK</code> prevents partial writes. Upon success, <code>trg_after_sale_insert</code> flips the vehicle status to <code>Sold</code> and logs an audit trail.
-</div>
-
 <div class="form-card">
     <form method="POST" action="add_sale.php">
         <input type="hidden" name="csrf_token" value="<?php echo e(csrf_token()); ?>">

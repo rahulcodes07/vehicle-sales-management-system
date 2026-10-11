@@ -76,7 +76,7 @@ $result = mysqli_query($conn, "SELECT * FROM view_sales_details ORDER BY sale_id
                         <td><?php echo htmlspecialchars($row['branch_location']); ?></td>
                         <td><?php echo date_label($row['sale_date']); ?></td>
                         <td>
-                            <strong class="inr-price">₹<?php echo number_format((float)$row['sale_price'], 2); ?></strong>
+                            <strong class="inr-price"><?php echo money((float)$row['sale_price']); ?></strong>
                         </td>
                         <td>
                             <span class="badge <?php echo $badgeClass; ?>"><?php echo $payMode; ?></span>

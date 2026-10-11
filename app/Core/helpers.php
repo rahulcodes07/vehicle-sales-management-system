@@ -8,7 +8,20 @@ function e(mixed $value): string
 
 function money(mixed $value): string
 {
-    return '₹' . number_format((float) $value, 2);
+    $num = (float) $value;
+    $formatted = number_format($num, 2);
+    $parts = explode('.', $formatted);
+    $int = str_replace(',', '', $parts[0]);
+    $dec = $parts[1];
+
+    if (strlen($int) <= 3) {
+        return '₹' . $int . '.' . $dec;
+    }
+
+    $last3 = substr($int, -3);
+    $remaining = substr($int, 0, -3);
+    $remaining = preg_replace('/\B(?=(\d{2})+(?!\d))/', ',', $remaining);
+    return '₹' . $remaining . ',' . $last3 . '.' . $dec;
 }
 
 function date_label(?string $value, string $format = 'M d, Y'): string

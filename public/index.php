@@ -118,7 +118,7 @@ $top_rep = mysqli_fetch_assoc(mysqli_query($conn, "SELECT * FROM view_employee_p
                 </svg>
             </div>
         </div>
-        <div class="stat-value">₹<?php echo number_format($total_revenue, 2); ?></div>
+        <div class="stat-value"><?php echo money($total_revenue); ?></div>
     </div>
 </div>
 
@@ -176,10 +176,6 @@ $top_rep = mysqli_fetch_assoc(mysqli_query($conn, "SELECT * FROM view_employee_p
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
         </a>
     </section>
-</div>
-
-<div class="concept-box">
-    <strong>💡 ADBMS Concept Highlight (Proposal Phase 3):</strong> The aggregate metrics above use SQL aggregate functions (<code>COUNT()</code>, <code>SUM()</code>, <code>COALESCE()</code>). The sales table below is queried dynamically through our database view (<code>view_sales_details</code> / <code>Sales_Summary</code>), encapsulating a 4-table relational join directly on the MySQL server.
 </div>
 
 <div class="page-header" style="margin-bottom: 16px;">
