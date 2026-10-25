@@ -1,5 +1,5 @@
 <?php
-$pageTitle = "Add Vehicle";
+$pageTitle = "Add vehicle";
 require_once __DIR__ . '/../app/Views/layouts/header.php';
 
 $successMsg = '';
@@ -7,6 +7,7 @@ $errorMsg = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
+
     $model    = trim($_POST['model'] ?? '');
     $yr       = intval($_POST['manufacturing_yr'] ?? 0);
     $type     = $_POST['type'] ?? 'Car';
@@ -16,114 +17,88 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $status   = 'Available';
 
     if (empty($model) || empty($color) || $yr < 1990 || $price <= 0) {
-        $errorMsg = "Please provide valid vehicle details (Year >= 1990 and Price > 0).";
+        $errorMsg = "Enter a model and colour, a year from 1990 onward, and a price above zero.";
     } else {
-        // SECURE: Using MySQLi Prepared Statement to prevent SQL Injection
         $stmt = mysqli_prepare($conn, "INSERT INTO Vehicle (model, manufacturing_yr, type, fuel_type, color, price, status) VALUES (?, ?, ?, ?, ?, ?, ?)");
         mysqli_stmt_bind_param($stmt, "sisssds", $model, $yr, $type, $fuel, $color, $price, $status);
 
-        if (mysqli_stmt_execute($stmt)) {
-            $successMsg = "Vehicle '{$model}' added successfully to inventory!";
-        } else {
-            $errorMsg = "Database Error: " . mysqli_error($conn);
+        try {
+            mysqli_stmt_execute($stmt);
+            $successMsg = "{$model} was added to stock.";
+        } catch (mysqli_sql_exception $e) {
+            $errorMsg = "The vehicle could not be saved. Check the details and try again.";
         }
         mysqli_stmt_close($stmt);
     }
 }
+
+// Keep what was typed when there is an error
+$form = $errorMsg !== '' ? $_POST : [];
+
+page_head(
+    'Add a vehicle',
+    'Enter the vehicle\'s details to add it to stock.',
+    '<a href="vehicles.php" class="btn">' . icon('arrow-left', 16) . 'Back to vehicles</a>'
+);
+
+if ($successMsg !== '') echo alert_box('success', $successMsg);
+if ($errorMsg !== '') echo alert_box('danger', $errorMsg);
 ?>
 
-<div class="page-header">
-    <div class="page-header-content">
-        <h1>Onboard New Vehicle to Fleet</h1>
-        <p class="subtitle">Enter specifications, powertrain category, and showroom price to register inventory stock.</p>
-    </div>
-    <a href="vehicles.php" class="btn">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
-        <span>Back to Inventory</span>
-    </a>
-</div>
+<form method="POST" action="add_vehicle.php" class="form-card">
+    <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
 
-<?php if (!empty($successMsg)): ?>
-    <div class="alert alert-success">
-        <div class="alert-content">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                <polyline points="22 4 12 14.01 9 11.01"/>
-            </svg>
-            <span><?php echo htmlspecialchars($successMsg); ?></span>
+    <div class="form-section">
+        <h2>Vehicle details</h2>
+        <p>Fields marked <span class="req">*</span> are required.</p>
+
+        <div class="field">
+            <label for="model">Model and trim <span class="req">*</span></label>
+            <input type="text" id="model" name="model" value="<?= e($form['model'] ?? '') ?>" placeholder="For example, Tata Harrier Fearless Plus" required>
         </div>
-        <button type="button" data-dismiss aria-label="Dismiss">&times;</button>
-    </div>
-<?php endif; ?>
-
-<?php if (!empty($errorMsg)): ?>
-    <div class="alert alert-danger">
-        <div class="alert-content">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"/>
-                <line x1="15" y1="9" x2="9" y2="15"/>
-                <line x1="9" y1="9" x2="15" y2="15"/>
-            </svg>
-            <span><?php echo htmlspecialchars($errorMsg); ?></span>
-        </div>
-        <button type="button" data-dismiss aria-label="Dismiss">&times;</button>
-    </div>
-<?php endif; ?>
-
-<div class="form-card">
-    <form method="POST" action="add_vehicle.php">
-        <input type="hidden" name="csrf_token" value="<?php echo e(csrf_token()); ?>">
-        
-        <div class="form-group">
-            <label for="model">Vehicle Model & Trim *</label>
-            <input type="text" id="model" name="model" placeholder="e.g. Tata Harrier Fearless Plus, Mahindra XUV700" required>
-        </div>
-
-        <div class="form-grid">
-            <div class="form-group">
-                <label for="manufacturing_yr">Manufacturing Model Year *</label>
-                <input type="number" id="manufacturing_yr" name="manufacturing_yr" min="1990" max="<?php echo date('Y') + 1; ?>" value="<?php echo date('Y'); ?>" required>
+        <div class="field-grid">
+            <div class="field">
+                <label for="manufacturing_yr">Model year <span class="req">*</span></label>
+                <input type="number" id="manufacturing_yr" name="manufacturing_yr" min="1990" max="<?= date('Y') + 1 ?>" value="<?= e($form['manufacturing_yr'] ?? date('Y')) ?>" required>
             </div>
-
-            <div class="form-group">
-                <label for="price">Ex-Showroom Base Price (₹) *</label>
-                <input type="number" id="price" name="price" step="0.01" min="1" placeholder="e.g. 1850000" required>
+            <div class="field">
+                <label for="color">Colour <span class="req">*</span></label>
+                <input type="text" id="color" name="color" value="<?= e($form['color'] ?? '') ?>" placeholder="For example, Daytona Grey" required>
             </div>
         </div>
-
-        <div class="form-grid">
-            <div class="form-group">
-                <label for="type">Vehicle Category</label>
+        <div class="field-grid">
+            <div class="field">
+                <label for="type">Category</label>
                 <select id="type" name="type">
-                    <option value="Car">Passenger Car</option>
-                    <option value="Bike">Motorcycle / Bike</option>
-                    <option value="SUV">SUV / Crossover</option>
-                    <option value="Truck">Commercial Truck</option>
+                    <?php foreach (['Car', 'Bike', 'SUV', 'Truck'] as $opt): ?>
+                        <option value="<?= e($opt) ?>" <?= selected($form['type'] ?? 'Car', $opt) ?>><?= e($opt) ?></option>
+                    <?php endforeach; ?>
                 </select>
             </div>
-
-            <div class="form-group">
-                <label for="fuel_type">Powertrain / Fuel Variant</label>
+            <div class="field">
+                <label for="fuel_type">Fuel</label>
                 <select id="fuel_type" name="fuel_type">
-                    <option value="Petrol">Petrol</option>
-                    <option value="Diesel">Diesel</option>
-                    <option value="Electric">Electric (EV)</option>
-                    <option value="CNG">CNG</option>
-                    <option value="Hybrid">Strong Hybrid</option>
+                    <?php foreach (['Petrol' => 'Petrol', 'Diesel' => 'Diesel', 'Electric' => 'Electric', 'CNG' => 'CNG', 'Hybrid' => 'Hybrid'] as $value => $label): ?>
+                        <option value="<?= e($value) ?>" <?= selected($form['fuel_type'] ?? 'Petrol', $value) ?>><?= e($label) ?></option>
+                    <?php endforeach; ?>
                 </select>
             </div>
         </div>
+    </div>
 
-        <div class="form-group">
-            <label for="color">Exterior Body Paint / Color *</label>
-            <input type="text" id="color" name="color" placeholder="e.g. Daytona Grey, Napoli Black" required>
+    <div class="form-section">
+        <h2>Price</h2>
+        <p>The listed price before any negotiation.</p>
+        <div class="field">
+            <label for="price">Showroom price (₹) <span class="req">*</span></label>
+            <input type="number" id="price" name="price" step="0.01" min="1" value="<?= e($form['price'] ?? '') ?>" placeholder="For example, 1850000" required>
         </div>
+    </div>
 
-        <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center; padding:12px;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-            <span>Save Vehicle to Stock</span>
-        </button>
-    </form>
-</div>
+    <div class="form-actions">
+        <a href="vehicles.php" class="btn">Cancel</a>
+        <button type="submit" class="btn btn-primary">Save vehicle</button>
+    </div>
+</form>
 
 <?php require_once __DIR__ . '/../app/Views/layouts/footer.php'; ?>

@@ -1,8 +1,8 @@
 <?php
-$pageTitle = "Dashboard";
+$pageTitle = "Overview";
 require_once __DIR__ . '/../app/Views/layouts/header.php';
 
-// Fetch summary metrics using SQL aggregate queries (Preserved intact)
+// Summary figures
 $v_total = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total FROM Vehicle"))['total'] ?? 0;
 $v_avail = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total FROM Vehicle WHERE status='Available'"))['total'] ?? 0;
 $v_sold  = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total FROM Vehicle WHERE status='Sold'"))['total'] ?? 0;
@@ -10,243 +10,138 @@ $c_total = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total FROM
 $e_total = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total FROM Employee"))['total'] ?? 0;
 $i_total = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total FROM Insurance"))['total'] ?? 0;
 $s_total = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total, COALESCE(SUM(sale_price), 0) as revenue FROM Sales"));
-$sales_count = $s_total['total'] ?? 0;
+$sales_count = (int) ($s_total['total'] ?? 0);
 $total_revenue = $s_total['revenue'] ?? 0;
 $inventory_mix = mysqli_query($conn, "SELECT * FROM view_inventory_summary ORDER BY total_count DESC");
 $top_rep = mysqli_fetch_assoc(mysqli_query($conn, "SELECT * FROM view_employee_performance ORDER BY total_revenue_generated DESC LIMIT 1"));
+$recent_sales = mysqli_query($conn, "SELECT * FROM Sales_Summary ORDER BY sale_id DESC LIMIT 5");
+
+$stockPercent = (int) $v_total > 0 ? (int) round(((int) $v_avail / (int) $v_total) * 100) : 0;
+$mixCount = mysqli_num_rows($inventory_mix);
+$recentCount = mysqli_num_rows($recent_sales);
+
+page_head(
+    'Overview',
+    'Stock, sales and team results in one place.',
+    '<a href="add_vehicle.php" class="btn">' . icon('car', 16) . 'Add vehicle</a>'
+    . '<a href="add_sale.php" class="btn btn-primary">' . icon('plus', 16) . 'Record sale</a>'
+);
 ?>
 
-<div class="page-header">
-    <div class="page-header-content">
-        <h1>Executive Dealership Dashboard</h1>
-        <p class="subtitle">Real-time overview of vehicle inventory, sales transactions, staff performance, and revenue analytics.</p>
+<section class="summary" aria-label="Summary">
+    <div class="summary-cell">
+        <p class="figure-label">Total revenue</p>
+        <p class="figure figure-lg"><?= e(money($total_revenue)) ?></p>
+        <p class="figure-note">From <?= number_format($sales_count) ?> <?= $sales_count === 1 ? 'sale' : 'sales' ?></p>
     </div>
-    <div class="topbar-actions">
-        <a href="add_sale.php" class="btn btn-primary">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-            <span>Record New Sale</span>
-        </a>
-        <a href="add_vehicle.php" class="btn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a1 1 0 0 0-.8-.4H5.24a2 2 0 0 0-1.8 1.1l-.8 1.63A6 6 0 0 0 2 12.42V16h2"></path>
-                <circle cx="6.5" cy="16.5" r="2.5"></circle>
-                <circle cx="16.5" cy="16.5" r="2.5"></circle>
-            </svg>
-            <span>Add Vehicle</span>
-        </a>
-    </div>
-</div>
 
-<div class="stats-grid">
-    <div class="stat-card primary">
-        <div class="stat-header">
-            <span class="stat-title">Total Fleet</span>
-            <div class="stat-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
-                    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
-                </svg>
-            </div>
+    <div class="summary-cell">
+        <p class="figure-label">Vehicles in stock</p>
+        <p class="figure"><?= number_format((int) $v_avail) ?> <span class="figure-unit">available</span></p>
+        <div class="meter" role="img" aria-label="<?= $stockPercent ?> percent of vehicles are available">
+            <span class="meter-fill" style="width: <?= $stockPercent ?>%"></span>
         </div>
-        <div class="stat-value"><?php echo number_format($v_total); ?></div>
+        <p class="figure-note"><?= number_format((int) $v_sold) ?> sold, <?= number_format((int) $v_total) ?> in total</p>
     </div>
 
-    <div class="stat-card success">
-        <div class="stat-header">
-            <span class="stat-title">Available Stock</span>
-            <div class="stat-icon" style="color:var(--emerald-solid);">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                </svg>
-            </div>
-        </div>
-        <div class="stat-value"><?php echo number_format($v_avail); ?></div>
-    </div>
+    <dl class="summary-cell kv">
+        <div><dt>Customers</dt><dd><?= number_format((int) $c_total) ?></dd></div>
+        <div><dt>Team members</dt><dd><?= number_format((int) $e_total) ?></dd></div>
+        <div><dt>Insurance policies</dt><dd><?= number_format((int) $i_total) ?></dd></div>
+    </dl>
+</section>
 
-    <div class="stat-card danger">
-        <div class="stat-header">
-            <span class="stat-title">Vehicles Sold</span>
-            <div class="stat-icon" style="color:var(--rose-solid);">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="20 6 9 17 4 12"></polyline>
-                </svg>
-            </div>
-        </div>
-        <div class="stat-value"><?php echo number_format($v_sold); ?></div>
-    </div>
-
-    <div class="stat-card purple">
-        <div class="stat-header">
-            <span class="stat-title">Clients Registered</span>
-            <div class="stat-icon" style="color:var(--purple-solid);">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                    <circle cx="9" cy="7" r="4"></circle>
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                </svg>
-            </div>
-        </div>
-        <div class="stat-value"><?php echo number_format($c_total); ?></div>
-    </div>
-
-    <div class="stat-card cyan">
-        <div class="stat-header">
-            <span class="stat-title">Dealership Team</span>
-            <div class="stat-icon" style="color:var(--cyan-solid);">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
-                    <circle cx="9" cy="7" r="4"></circle>
-                    <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
-                </svg>
-            </div>
-        </div>
-        <div class="stat-value"><?php echo number_format($e_total); ?></div>
-    </div>
-
-    <div class="stat-card warning">
-        <div class="stat-header">
-            <span class="stat-title">Gross Revenue</span>
-            <div class="stat-icon" style="color:var(--amber-solid);">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="12" y1="1" x2="12" y2="23"></line>
-                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-                </svg>
-            </div>
-        </div>
-        <div class="stat-value"><?php echo money($total_revenue); ?></div>
-    </div>
-</div>
-
-<div class="dashboard-grid">
+<div class="split">
     <section class="panel">
-        <div class="panel-heading">
-            <div>
-                <span class="eyebrow">Inventory Intelligence</span>
-                <h2>Stock Distribution by Vehicle Type</h2>
-            </div>
-            <a href="vehicles.php" class="text-link">
-                <span>View Full Inventory</span>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
-            </a>
+        <div class="panel-head">
+            <h2>Stock by category</h2>
+            <a href="vehicles.php">View all vehicles</a>
         </div>
-        <?php while ($mix = mysqli_fetch_assoc($inventory_mix)): ?>
-            <?php $share = $v_total > 0 ? min(100, ((int) $mix['total_count'] / $v_total) * 100) : 0; ?>
-            <div class="metric-row">
-                <div class="metric-label">
-                    <strong><?php echo htmlspecialchars($mix['type']); ?></strong>
-                    <span><?php echo (int) $mix['available_count']; ?> Available &bull; <?php echo (int) $mix['sold_count']; ?> Sold</span>
-                </div>
-                <div class="metric-track">
-                    <span style="width: <?php echo $share; ?>%"></span>
-                </div>
-            </div>
-        <?php endwhile; ?>
-    </section>
-
-    <section class="panel highlight-panel">
-        <span class="eyebrow">Top Sales Performer</span>
-        <h2>Showroom Leaderboard</h2>
-        <?php if ($top_rep): ?>
-            <div class="profile-chip">
-                <div class="avatar"><?php echo strtoupper(substr($top_rep['employee_name'], 0, 1)); ?></div>
-                <div>
-                    <strong><?php echo htmlspecialchars($top_rep['employee_name']); ?></strong>
-                    <span><?php echo htmlspecialchars($top_rep['branch_name']); ?> &bull; <?php echo htmlspecialchars($top_rep['role']); ?></span>
-                </div>
-            </div>
-            <div class="rep-number">
-                <?php echo number_format((int) $top_rep['total_vehicles_sold']); ?>
-                <small>vehicles sold</small>
-            </div>
-            <p class="muted">
-                Cumulative Revenue: <strong class="inr-price"><?php echo money($top_rep['total_revenue_generated']); ?></strong>
-            </p>
-        <?php else: ?>
-            <div class="empty-state" style="padding: 20px 0;">
-                <p class="muted">Performance data will appear after sales transactions are recorded.</p>
-            </div>
-        <?php endif; ?>
-        <a href="reports.php" class="btn btn-sm btn-primary" style="margin-top:auto; width:fit-content;">
-            <span>Explore Analytics</span>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
-        </a>
-    </section>
-</div>
-
-<div class="page-header" style="margin-bottom: 16px;">
-    <h2>Recent Sales Transactions (via <code>Sales_Summary</code> View)</h2>
-    <a href="sales.php" class="text-link">View All Sales &rarr;</a>
-</div>
-
-<div class="table-responsive">
-    <table>
-        <thead>
-            <tr>
-                <th>Sale ID</th>
-                <th>Vehicle Model</th>
-                <th>Customer</th>
-                <th>Sales Consultant</th>
-                <th>Branch Location</th>
-                <th>Sale Date</th>
-                <th>Final Amount</th>
-                <th>Payment Mode</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php
-            $recent_sales = mysqli_query($conn, "SELECT * FROM Sales_Summary ORDER BY sale_id DESC LIMIT 5");
-            if (mysqli_num_rows($recent_sales) > 0):
-                while($row = mysqli_fetch_assoc($recent_sales)):
-                    $payMode = htmlspecialchars($row['payment_mode']);
-                    $badgeClass = match($payMode) {
-                        'Cash' => 'badge-success',
-                        'Loan' => 'badge-purple',
-                        'UPI'  => 'badge-cyan',
-                        'Card' => 'badge-info',
-                        default => 'badge-warning'
-                    };
-            ?>
-                <tr>
-                    <td>
-                        <span class="code-id">SALE-<?php echo sprintf('%03d', (int)$row['sale_id']); ?></span>
-                    </td>
-                    <td>
-                        <strong><?php echo htmlspecialchars($row['vehicle_model']); ?></strong>
-                        <div style="font-size:11.5px; color:var(--text-muted);"><?php echo htmlspecialchars($row['vehicle_color']); ?></div>
-                    </td>
-                    <td><strong><?php echo htmlspecialchars($row['customer_name']); ?></strong></td>
-                    <td><?php echo htmlspecialchars($row['employee_name']); ?></td>
-                    <td><?php echo htmlspecialchars($row['branch_location']); ?></td>
-                    <td><?php echo date_label($row['sale_date']); ?></td>
-                    <td><strong class="inr-price">₹<?php echo number_format((float)$row['sale_price'], 2); ?></strong></td>
-                    <td><span class="badge <?php echo $badgeClass; ?>"><?php echo $payMode; ?></span></td>
-                </tr>
-            <?php 
-                endwhile;
-            else:
-            ?>
-                <tr>
-                    <td colspan="8">
-                        <div class="empty-state">
-                            <div class="empty-state-icon">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                                    <circle cx="12" cy="12" r="10"></circle>
-                                    <line x1="8" y1="12" x2="16" y2="12"></line>
-                                </svg>
-                            </div>
-                            <h3>No transactions recorded yet</h3>
-                            <p>Click "+ Record New Sale" to process your first vehicle purchase transaction.</p>
-                        </div>
-                    </td>
-                </tr>
+        <div class="panel-body mix">
+            <?php if ($mixCount === 0): ?>
+                <p class="figure-note">No vehicles have been added yet.</p>
             <?php endif; ?>
-        </tbody>
-    </table>
+            <?php while ($mix = mysqli_fetch_assoc($inventory_mix)): ?>
+                <?php
+                $catTotal = max(1, (int) $mix['total_count']);
+                $availPct = (int) round(((int) $mix['available_count'] / $catTotal) * 100);
+                ?>
+                <div class="mix-row">
+                    <div class="mix-top">
+                        <strong><?= e($mix['type']) ?></strong>
+                        <span><?= (int) $mix['available_count'] ?> of <?= (int) $mix['total_count'] ?> available</span>
+                    </div>
+                    <div class="meter"><span class="meter-fill" style="width: <?= $availPct ?>%"></span></div>
+                </div>
+            <?php endwhile; ?>
+        </div>
+    </section>
+
+    <section class="panel">
+        <div class="panel-head">
+            <h2>Top performer</h2>
+            <a href="reports.php">Full report</a>
+        </div>
+        <div class="panel-body">
+            <?php if ($top_rep && (int) $top_rep['total_vehicles_sold'] > 0): ?>
+                <div class="leader">
+                    <div class="avatar avatar-lg"><?= e(strtoupper(substr((string) $top_rep['employee_name'], 0, 1))) ?></div>
+                    <div>
+                        <strong><?= e($top_rep['employee_name']) ?></strong>
+                        <span><?= e($top_rep['role']) ?>, <?= e($top_rep['branch_name']) ?></span>
+                    </div>
+                </div>
+                <p class="leader-count"><?= number_format((int) $top_rep['total_vehicles_sold']) ?><small>vehicles sold</small></p>
+                <p class="figure-note">Revenue brought in: <strong><?= e(money($top_rep['total_revenue_generated'])) ?></strong></p>
+            <?php else: ?>
+                <p class="figure-note">Results will show here once the first sale is recorded.</p>
+            <?php endif; ?>
+        </div>
+    </section>
 </div>
+
+<section class="section">
+    <div class="section-head">
+        <h2>Recent sales</h2>
+        <a href="sales.php">View all sales</a>
+    </div>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Sale</th>
+                    <th>Vehicle</th>
+                    <th>Customer</th>
+                    <th>Sold by</th>
+                    <th>Branch</th>
+                    <th>Date</th>
+                    <th class="num">Amount</th>
+                    <th>Payment</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if ($recentCount > 0): ?>
+                    <?php while ($row = mysqli_fetch_assoc($recent_sales)): ?>
+                        <tr>
+                            <td class="id"><?= fmt_code('SALE', (int) $row['sale_id']) ?></td>
+                            <td>
+                                <div class="cell-main"><?= e($row['vehicle_model']) ?></div>
+                                <div class="cell-sub"><?= e($row['vehicle_color']) ?></div>
+                            </td>
+                            <td><?= e($row['customer_name']) ?></td>
+                            <td><?= e($row['employee_name']) ?></td>
+                            <td><?= e($row['branch_location']) ?></td>
+                            <td><?= e(date_label($row['sale_date'])) ?></td>
+                            <td class="num cell-main"><?= e(money($row['sale_price'])) ?></td>
+                            <td><?= tag((string) $row['payment_mode']) ?></td>
+                        </tr>
+                    <?php endwhile; ?>
+                <?php else: ?>
+                    <?= empty_row(8, 'No sales yet', 'Sales you record will appear here.', '<a href="add_sale.php" class="btn btn-primary btn-sm">Record the first sale</a>') ?>
+                <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+</section>
 
 <?php require_once __DIR__ . '/../app/Views/layouts/footer.php'; ?>

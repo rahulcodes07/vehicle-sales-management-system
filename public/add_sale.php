@@ -1,5 +1,5 @@
 <?php
-$pageTitle = "Record Sale";
+$pageTitle = "Record sale";
 require_once __DIR__ . '/../app/Views/layouts/header.php';
 require_once __DIR__ . '/../app/Services/SaleService.php';
 
@@ -9,6 +9,7 @@ $selected_vehicle_id = intval($_GET['vehicle_id'] ?? 0);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
+
     $vehicle_id   = intval($_POST['vehicle_id'] ?? 0);
     $customer_id  = intval($_POST['customer_id'] ?? 0);
     $employee_id  = intval($_POST['employee_id'] ?? 0);
@@ -16,8 +17,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $payment_mode = $_POST['payment_mode'] ?? 'Cash';
 
     $allowedPaymentModes = ['Cash', 'Loan', 'Card', 'UPI', 'Net Banking'];
+
     if ($vehicle_id <= 0 || $customer_id <= 0 || $employee_id <= 0 || $sale_price <= 0 || !in_array($payment_mode, $allowedPaymentModes, true)) {
-        $errorMsg = "Please fill all fields with valid data (Sale price must be greater than 0).";
+        $errorMsg = "Choose a vehicle, a customer and a consultant, and enter a price above zero.";
     } else {
         try {
             $result = (new SaleService($conn))->record(
@@ -27,137 +29,121 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $sale_price,
                 $payment_mode
             );
+
             if ($result['status_code'] === 200) {
-                $successMsg = $result['status_msg'];
+                $successMsg = 'The sale was recorded and the vehicle is now marked as sold.';
             } else {
-                $errorMsg = $result['status_msg'];
+                $errorMsg = match ($result['status_code']) {
+                    404 => 'That vehicle could not be found. Choose a vehicle from the list.',
+                    409 => 'This vehicle has already been sold. Choose another one.',
+                    default => 'The sale could not be recorded. Check the customer and consultant and try again.',
+                };
             }
         } catch (mysqli_sql_exception $exception) {
-            $errorMsg = 'The database sale procedure could not complete. Verify the ADBMS objects are imported.';
+            $errorMsg = 'The sale could not be recorded right now. Please try again.';
         }
     }
 }
 
-// Fetch available vehicles using our SQL View (Preserved intact)
 $vehicles  = mysqli_query($conn, "SELECT * FROM view_available_vehicles ORDER BY model ASC");
 $customers = mysqli_query($conn, "SELECT * FROM Customer ORDER BY name ASC");
 $employees = mysqli_query($conn, "SELECT e.*, b.name as branch_name FROM Employee e INNER JOIN Branch b ON e.branch_id = b.branch_id ORDER BY e.name ASC");
+
+// Keep the choices when there is an error
+$form = $errorMsg !== '' ? $_POST : [];
+$preselect = (int) ($form['vehicle_id'] ?? $selected_vehicle_id);
+
+page_head(
+    'Record a sale',
+    'Choose the vehicle, the customer and the consultant, then enter the agreed price.',
+    '<a href="sales.php" class="btn">' . icon('arrow-left', 16) . 'Back to sales</a>'
+);
+
+if ($errorMsg !== '') echo alert_box('danger', $errorMsg);
 ?>
 
-<div class="page-header">
-    <div class="page-header-content">
-        <h1>Record Vehicle Purchase Contract</h1>
-        <p class="subtitle">Execute vehicle sales transaction under database-enforced ACID row-locking isolation.</p>
-    </div>
-    <a href="sales.php" class="btn">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
-        <span>Back to Sales</span>
-    </a>
-</div>
-
-<?php if (!empty($successMsg)): ?>
-    <div class="alert alert-success">
-        <div class="alert-content">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                <polyline points="22 4 12 14.01 9 11.01"/>
-            </svg>
-            <div>
-                <strong>Transaction Committed!</strong>
-                <div><?php echo htmlspecialchars($successMsg); ?></div>
-            </div>
-        </div>
-        <div style="display:flex; gap:8px;">
-            <a href="sales.php" class="btn btn-sm btn-primary">View Ledger</a>
-            <a href="audit_log.php" class="btn btn-sm">Trigger Log</a>
-        </div>
+<?php if ($successMsg !== ''): ?>
+    <div class="alert alert-success" role="status">
+        <?= icon('check-circle', 18) ?>
+        <p><?= e($successMsg) ?></p>
+        <a href="sales.php" class="btn btn-sm">View sales</a>
+        <button type="button" class="alert-close" data-dismiss aria-label="Dismiss"><?= icon('x', 16) ?></button>
     </div>
 <?php endif; ?>
 
-<?php if (!empty($errorMsg)): ?>
-    <div class="alert alert-danger">
-        <div class="alert-content">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"/>
-                <line x1="15" y1="9" x2="9" y2="15"/>
-                <line x1="9" y1="9" x2="15" y2="15"/>
-            </svg>
-            <span><?php echo htmlspecialchars($errorMsg); ?></span>
-        </div>
-        <button type="button" data-dismiss aria-label="Dismiss">&times;</button>
-    </div>
-<?php endif; ?>
+<form method="POST" action="add_sale.php" class="form-card">
+    <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
 
-<div class="form-card">
-    <form method="POST" action="add_sale.php">
-        <input type="hidden" name="csrf_token" value="<?php echo e(csrf_token()); ?>">
-        
-        <div class="form-group">
-            <label for="vehicle_id">Select Available Vehicle (via <code>view_available_vehicles</code>) *</label>
+    <div class="form-section">
+        <h2>Who and what</h2>
+        <p>Only vehicles that are still available can be sold.</p>
+
+        <div class="field">
+            <label for="vehicle_id">Vehicle <span class="req">*</span></label>
             <select id="vehicle_id" name="vehicle_id" required>
-                <option value="">-- Choose Available Vehicle From Showroom Stock --</option>
+                <option value="">Choose a vehicle</option>
                 <?php if (mysqli_num_rows($vehicles) > 0): ?>
-                    <?php while($v = mysqli_fetch_assoc($vehicles)): ?>
-                        <option value="<?php echo $v['vehicle_id']; ?>" <?php echo ($selected_vehicle_id == $v['vehicle_id']) ? 'selected' : ''; ?>>
-                            <?php echo htmlspecialchars($v['model'] . ' (' . $v['color'] . ', ' . $v['manufacturing_yr'] . ') — Base: ₹' . number_format((float)$v['price'], 2)); ?>
+                    <?php while ($v = mysqli_fetch_assoc($vehicles)): ?>
+                        <option value="<?= (int) $v['vehicle_id'] ?>" <?= $preselect === (int) $v['vehicle_id'] ? 'selected' : '' ?>>
+                            <?= e($v['model'] . ' (' . $v['color'] . ', ' . $v['manufacturing_yr'] . '), listed at ' . money((float) $v['price'])) ?>
                         </option>
                     <?php endwhile; ?>
                 <?php else: ?>
-                    <option value="" disabled>No available vehicles in showroom stock</option>
+                    <option value="" disabled>No vehicles are available right now</option>
                 <?php endif; ?>
             </select>
         </div>
 
-        <div class="form-group">
-            <label for="customer_id">Select Purchasing Client *</label>
+        <div class="field">
+            <label for="customer_id">Customer <span class="req">*</span></label>
             <select id="customer_id" name="customer_id" required>
-                <option value="">-- Select Registered Client --</option>
-                <?php while($c = mysqli_fetch_assoc($customers)): ?>
-                    <option value="<?php echo $c['customer_id']; ?>">
-                        <?php echo htmlspecialchars($c['name'] . ' (' . $c['phone'] . ')'); ?>
+                <option value="">Choose a customer</option>
+                <?php while ($c = mysqli_fetch_assoc($customers)): ?>
+                    <option value="<?= (int) $c['customer_id'] ?>" <?= selected($form['customer_id'] ?? '', $c['customer_id']) ?>>
+                        <?= e($c['name'] . ' (' . $c['phone'] . ')') ?>
                     </option>
                 <?php endwhile; ?>
             </select>
-            <small style="display:block; margin-top:5px; color:var(--text-muted);">
-                Need a new client? <a href="add_customer.php" target="_blank" class="text-link">Register new customer &rarr;</a>
-            </small>
+            <span class="hint">Not registered yet? <a href="add_customer.php" target="_blank" rel="noopener">Register a new customer</a></span>
         </div>
 
-        <div class="form-group">
-            <label for="employee_id">Assigned Sales Consultant *</label>
+        <div class="field">
+            <label for="employee_id">Sales consultant <span class="req">*</span></label>
             <select id="employee_id" name="employee_id" required>
-                <option value="">-- Select Sales Representative --</option>
-                <?php while($e = mysqli_fetch_assoc($employees)): ?>
-                    <option value="<?php echo $e['employee_id']; ?>">
-                        <?php echo htmlspecialchars($e['name'] . ' &bull; ' . $e['role'] . ' (' . $e['branch_name'] . ')'); ?>
+                <option value="">Choose a consultant</option>
+                <?php while ($e = mysqli_fetch_assoc($employees)): ?>
+                    <option value="<?= (int) $e['employee_id'] ?>" <?= selected($form['employee_id'] ?? '', $e['employee_id']) ?>>
+                        <?= htmlspecialchars($e['name'] . ', ' . $e['role'] . ' (' . $e['branch_name'] . ')') ?>
                     </option>
                 <?php endwhile; ?>
             </select>
         </div>
+    </div>
 
-        <div class="form-grid">
-            <div class="form-group">
-                <label for="sale_price">Final Agreed Purchase Price (₹) *</label>
-                <input type="number" id="sale_price" name="sale_price" step="0.01" min="1" placeholder="e.g. 1800000" required>
+    <div class="form-section">
+        <h2>Payment</h2>
+        <p>The price you and the customer agreed on.</p>
+
+        <div class="field-grid">
+            <div class="field">
+                <label for="sale_price">Agreed price (₹) <span class="req">*</span></label>
+                <input type="number" id="sale_price" name="sale_price" step="0.01" min="1" value="<?= e($form['sale_price'] ?? '') ?>" placeholder="For example, 1800000" required>
             </div>
-
-            <div class="form-group">
-                <label for="payment_mode">Financing / Payment Mode *</label>
+            <div class="field">
+                <label for="payment_mode">Payment method <span class="req">*</span></label>
                 <select id="payment_mode" name="payment_mode">
-                    <option value="Cash">Cash Settlement</option>
-                    <option value="Loan">Auto Loan / Financing</option>
-                    <option value="Card">Debit / Credit Card</option>
-                    <option value="UPI">UPI Payment</option>
-                    <option value="Net Banking">Net Banking / NEFT</option>
+                    <?php foreach (['Cash' => 'Cash', 'Loan' => 'Loan or finance', 'Card' => 'Card', 'UPI' => 'UPI', 'Net Banking' => 'Net banking'] as $value => $label): ?>
+                        <option value="<?= e($value) ?>" <?= selected($form['payment_mode'] ?? 'Cash', $value) ?>><?= e($label) ?></option>
+                    <?php endforeach; ?>
                 </select>
             </div>
         </div>
+    </div>
 
-        <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center; padding:12px;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
-            <span>Execute &amp; Commit Sale Transaction</span>
-        </button>
-    </form>
-</div>
+    <div class="form-actions">
+        <a href="sales.php" class="btn">Cancel</a>
+        <button type="submit" class="btn btn-primary">Record sale</button>
+    </div>
+</form>
 
 <?php require_once __DIR__ . '/../app/Views/layouts/footer.php'; ?>

@@ -1,7 +1,6 @@
             </main>
             <footer class="site-footer">
-                <span><strong>GHOST Vehicle Sales</strong> &bull; Advanced Database Management System</span>
-                <span>ACID Transactions &bull; Engine Triggers &bull; Normalized 3NF</span>
+                <span>&copy; <?= date('Y') ?> Ghost Vehicle Sales</span>
             </footer>
         </div>
     </div>

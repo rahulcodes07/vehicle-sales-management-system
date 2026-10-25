@@ -1,5 +1,5 @@
 <?php
-$pageTitle = "Issue Insurance";
+$pageTitle = "Issue policy";
 require_once __DIR__ . '/../app/Views/layouts/header.php';
 
 $successMsg = '';
@@ -7,6 +7,7 @@ $errorMsg = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
+
     $vehicle_id  = intval($_POST['vehicle_id'] ?? 0);
     $customer_id = intval($_POST['customer_id'] ?? 0);
     $provider    = trim($_POST['provider'] ?? '');
@@ -16,141 +17,109 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $premium     = floatval($_POST['premium'] ?? 0);
 
     if ($vehicle_id <= 0 || $customer_id <= 0 || empty($provider) || empty($policy_no) || empty($start_date) || empty($end_date) || $premium <= 0) {
-        $errorMsg = "Please fill in all mandatory fields with valid values.";
+        $errorMsg = "Fill in every field and enter a premium above zero.";
     } elseif (strtotime($end_date) <= strtotime($start_date)) {
-        $errorMsg = "Policy End Date must be after the Start Date (Enforcing Table Check Constraint: end_date > start_date).";
+        $errorMsg = "The end date must be after the start date.";
     } else {
         $stmt = mysqli_prepare($conn, "INSERT INTO Insurance (vehicle_id, customer_id, provider, policy_no, start_date, end_date, premium) VALUES (?, ?, ?, ?, ?, ?, ?)");
         mysqli_stmt_bind_param($stmt, "iissssd", $vehicle_id, $customer_id, $provider, $policy_no, $start_date, $end_date, $premium);
 
         try {
-            if (mysqli_stmt_execute($stmt)) {
-                $successMsg = "Insurance Policy #{$policy_no} issued successfully!";
-            } else {
-                $errorMsg = "Database Error: " . mysqli_error($conn);
-            }
+            mysqli_stmt_execute($stmt);
+            $successMsg = "Policy {$policy_no} was issued.";
         } catch (mysqli_sql_exception $e) {
-            $errorMsg = "Error: Policy Number must be unique, or Check Constraint failed.";
+            $errorMsg = "The policy could not be saved. The policy number may already exist.";
         }
         mysqli_stmt_close($stmt);
     }
 }
 
-// Fetch all vehicles and customers (Preserved intact)
 $vehicles  = mysqli_query($conn, "SELECT vehicle_id, model, color, status FROM Vehicle ORDER BY model ASC");
 $customers = mysqli_query($conn, "SELECT customer_id, name, phone FROM Customer ORDER BY name ASC");
+
+$form = $errorMsg !== '' ? $_POST : [];
+$defaultPolicyNo = 'POL-' . strtoupper(bin2hex(random_bytes(4)));
+
+page_head(
+    'Issue an insurance policy',
+    'Link a policy to a vehicle and the person insured.',
+    '<a href="insurance.php" class="btn">' . icon('arrow-left', 16) . 'Back to insurance</a>'
+);
+
+if ($successMsg !== '') echo alert_box('success', $successMsg);
+if ($errorMsg !== '') echo alert_box('danger', $errorMsg);
 ?>
 
-<div class="page-header">
-    <div class="page-header-content">
-        <h1>Issue Vehicle Insurance Policy</h1>
-        <p class="subtitle">Bind comprehensive vehicle coverage policy to vehicle inventory and verified client policyholders.</p>
-    </div>
-    <a href="insurance.php" class="btn">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
-        <span>Back to Policies</span>
-    </a>
-</div>
+<form method="POST" action="add_insurance.php" class="form-card">
+    <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
 
-<?php if (!empty($successMsg)): ?>
-    <div class="alert alert-success">
-        <div class="alert-content">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                <polyline points="22 4 12 14.01 9 11.01"/>
-            </svg>
-            <span><?php echo htmlspecialchars($successMsg); ?></span>
-        </div>
-        <button type="button" data-dismiss aria-label="Dismiss">&times;</button>
-    </div>
-<?php endif; ?>
+    <div class="form-section">
+        <h2>Who and what is covered</h2>
+        <p>Fields marked <span class="req">*</span> are required.</p>
 
-<?php if (!empty($errorMsg)): ?>
-    <div class="alert alert-danger">
-        <div class="alert-content">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"/>
-                <line x1="15" y1="9" x2="9" y2="15"/>
-                <line x1="9" y1="9" x2="15" y2="15"/>
-            </svg>
-            <span><?php echo htmlspecialchars($errorMsg); ?></span>
-        </div>
-        <button type="button" data-dismiss aria-label="Dismiss">&times;</button>
-    </div>
-<?php endif; ?>
-
-<div class="concept-box">
-    <strong>💡 Table Check Constraint (Proposal Phase 2 &amp; 3):</strong> The Insurance entity enforces the constraint <code>CHECK (end_date &gt; start_date)</code> directly at the database engine level. Entering an invalid expiration date triggers an integrity exception.
-</div>
-
-<div class="form-card">
-    <form method="POST" action="add_insurance.php">
-        <input type="hidden" name="csrf_token" value="<?php echo e(csrf_token()); ?>">
-        
-        <div class="form-group">
-            <label for="vehicle_id">Covered Vehicle *</label>
+        <div class="field">
+            <label for="vehicle_id">Vehicle <span class="req">*</span></label>
             <select id="vehicle_id" name="vehicle_id" required>
-                <option value="">-- Choose Vehicle For Policy --</option>
-                <?php while($v = mysqli_fetch_assoc($vehicles)): ?>
-                    <option value="<?php echo $v['vehicle_id']; ?>">
-                        <?php echo htmlspecialchars($v['model'] . ' (' . $v['color'] . ') &bull; ' . $v['status']); ?>
+                <option value="">Choose a vehicle</option>
+                <?php while ($v = mysqli_fetch_assoc($vehicles)): ?>
+                    <option value="<?= (int) $v['vehicle_id'] ?>" <?= selected($form['vehicle_id'] ?? '', $v['vehicle_id']) ?>>
+                        <?= e($v['model'] . ' (' . $v['color'] . '), ' . strtolower((string) $v['status'])) ?>
                     </option>
                 <?php endwhile; ?>
             </select>
         </div>
-
-        <div class="form-group">
-            <label for="customer_id">Insured Policyholder / Client *</label>
+        <div class="field">
+            <label for="customer_id">Policyholder <span class="req">*</span></label>
             <select id="customer_id" name="customer_id" required>
-                <option value="">-- Choose Client Policyholder --</option>
-                <?php while($c = mysqli_fetch_assoc($customers)): ?>
-                    <option value="<?php echo $c['customer_id']; ?>">
-                        <?php echo htmlspecialchars($c['name'] . ' (' . $c['phone'] . ')'); ?>
+                <option value="">Choose a customer</option>
+                <?php while ($c = mysqli_fetch_assoc($customers)): ?>
+                    <option value="<?= (int) $c['customer_id'] ?>" <?= selected($form['customer_id'] ?? '', $c['customer_id']) ?>>
+                        <?= e($c['name'] . ' (' . $c['phone'] . ')') ?>
                     </option>
                 <?php endwhile; ?>
             </select>
         </div>
+    </div>
 
-        <div class="form-grid">
-            <div class="form-group">
-                <label for="provider">Underwriting Insurance Company *</label>
+    <div class="form-section">
+        <h2>Policy details</h2>
+        <p>The insurer, the policy number and the cover dates.</p>
+
+        <div class="field-grid">
+            <div class="field">
+                <label for="provider">Insurer <span class="req">*</span></label>
                 <select id="provider" name="provider">
-                    <option value="HDFC ERGO General Insurance">HDFC ERGO General Insurance</option>
-                    <option value="ICICI Lombard General Insurance">ICICI Lombard General Insurance</option>
-                    <option value="Bajaj Allianz General Insurance">Bajaj Allianz General Insurance</option>
-                    <option value="Tata AIG General Insurance">Tata AIG General Insurance</option>
-                    <option value="New India Assurance">New India Assurance</option>
+                    <?php foreach (['HDFC ERGO General Insurance', 'ICICI Lombard General Insurance', 'Bajaj Allianz General Insurance', 'Tata AIG General Insurance', 'New India Assurance'] as $opt): ?>
+                        <option value="<?= e($opt) ?>" <?= selected($form['provider'] ?? '', $opt) ?>><?= e($opt) ?></option>
+                    <?php endforeach; ?>
                 </select>
             </div>
-
-            <div class="form-group">
-                <label for="policy_no">Policy Certificate Number (Unique) *</label>
-                <input type="text" id="policy_no" name="policy_no" value="POL-<?php echo strtoupper(bin2hex(random_bytes(4))); ?>" required>
+            <div class="field">
+                <label for="policy_no">Policy number <span class="req">*</span></label>
+                <input type="text" id="policy_no" name="policy_no" value="<?= e($form['policy_no'] ?? $defaultPolicyNo) ?>" required>
+                <span class="hint">Must not match an existing policy.</span>
             </div>
         </div>
-
-        <div class="form-grid">
-            <div class="form-group">
-                <label for="start_date">Policy Effective Date *</label>
-                <input type="date" id="start_date" name="start_date" value="<?php echo date('Y-m-d'); ?>" required>
+        <div class="field-grid">
+            <div class="field">
+                <label for="start_date">Cover starts <span class="req">*</span></label>
+                <input type="date" id="start_date" name="start_date" value="<?= e($form['start_date'] ?? date('Y-m-d')) ?>" required>
             </div>
-
-            <div class="form-group">
-                <label for="end_date">Policy Expiration Date (Must be &gt; Start) *</label>
-                <input type="date" id="end_date" name="end_date" value="<?php echo date('Y-m-d', strtotime('+1 year')); ?>" required>
+            <div class="field">
+                <label for="end_date">Cover ends <span class="req">*</span></label>
+                <input type="date" id="end_date" name="end_date" value="<?= e($form['end_date'] ?? date('Y-m-d', strtotime('+1 year'))) ?>" required>
             </div>
         </div>
-
-        <div class="form-group">
-            <label for="premium">Annual Gross Premium (₹) *</label>
-            <input type="number" id="premium" name="premium" step="100" min="500" placeholder="e.g. 34000" required>
+        <div class="field">
+            <label for="premium">Yearly premium (₹) <span class="req">*</span></label>
+            <input type="number" id="premium" name="premium" step="100" min="500" value="<?= e($form['premium'] ?? '') ?>" placeholder="For example, 34000" required>
         </div>
+    </div>
 
-        <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center; padding:12px;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
-            <span>Bind &amp; Issue Insurance Certificate</span>
-        </button>
-    </form>
-</div>
+    <div class="form-actions">
+        <a href="insurance.php" class="btn">Cancel</a>
+        <button type="submit" class="btn btn-primary">Issue policy</button>
+    </div>
+</form>
 
 <?php require_once __DIR__ . '/../app/Views/layouts/footer.php'; ?>
